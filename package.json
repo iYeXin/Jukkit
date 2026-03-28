@@ -1,0 +1,16 @@
+{
+  "name": "jukkit",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.d.ts",
+  "scripts": {
+    "build": "node jukkit-build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "type": "commonjs",
+  "dependencies": {
+    "adm-zip": "^0.5.16"
+  }
+}
