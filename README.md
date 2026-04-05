@@ -59,24 +59,36 @@ npm install
 
 Jukkit 1.3.0+ 提供两种编译目标：
 
-### Standalone 版本
+### Common 版本（推荐）
+
+- ✅ 支持 Vert.x 网络库
+- ✅ 多插件共享依赖，总体积更小
+- ✅ 未来支持 Node.js 核心模块和 npm 生态
+- ⚠️ 需要 Jukkit-Common 前置插件
+
+### Standalone 版本（不推荐）
 
 - ✅ 内嵌 Nashorn JavaScript 引擎
 - ✅ 无需任何前置插件
-- ✅ 开箱即用
-- ❌ 不支持 Vert.x 网络库
+- ❌ 不支持 Vert.x
+- ❌ 不支持 Node.js 核心模块和 npm 生态
+- ⚠️ 未来不会添加新功能
 
-### Common 版本
+### 体积对比
 
-- ✅ 支持 Vert.x 网络库
-- ✅ 多插件共享依赖，体积更小
-- ⚠️ 需要 Jukkit-Common 前置插件
+| 组件                   | 大小                          |
+| ---------------------- | ----------------------------- |
+| Jukkit-Common 前置插件 | ~8.5 MB                       |
+| Standalone 方案插件    | ~2.5 MB                       |
+| Common 方案插件        | > 0.05 MB（取决于项目复杂度） |
+
+> **建议**：对于新项目，推荐使用 Common 版本。Standalone 版本适合简单场景或不想安装前置插件的情况。
 
 在 `jukkit.config.js` 中配置：
 
 ```javascript
 project: {
-    target: 'standalone'  // 或 'common'，或 ['standalone', 'common'] 同时编译
+    target: 'common'  // 或 'standalone'，或 ['standalone', 'common'] 同时编译
 }
 ```
 
