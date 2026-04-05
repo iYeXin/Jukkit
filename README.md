@@ -120,6 +120,12 @@ Jukkit/
 
 详见 [库模块文档](./docs/LIBS.md)。
 
+## TODO
+
+- 使用 Vert.x 提供 Node.js 核心模块兼容层，以支持 npm 生态
+- 支持 source map
+- 迁移至其他 JS 引擎
+
 ## 相关项目
 
 - **Jukkit-Common** - 前置插件，提供 Nashorn 引擎和 Vert.x 的共享实例（仅 Common 版本需要）
