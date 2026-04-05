@@ -1,0 +1,7 @@
+{
+    "welcome": "§eWelcome to the server!",
+    "goodbye": "§cGoodbye, see you next time!",
+    "noPermission": "§cYou don't have permission to do this!",
+    "playerJoin": "§a%s joined the server",
+    "playerQuit": "§7%s left the server"
+}

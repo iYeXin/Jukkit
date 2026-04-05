@@ -1,0 +1,7 @@
+{
+    "welcome": "§e欢迎来到服务器!",
+    "goodbye": "§c再见，下次再来玩哦！",
+    "noPermission": "§c你没有权限执行此操作！",
+    "playerJoin": "§a%s 加入了服务器",
+    "playerQuit": "§7%s 离开了服务器"
+}

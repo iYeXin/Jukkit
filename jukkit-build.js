@@ -1,18 +1,15 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { createRequire } = require('module');
+const { spawn } = require('child_process');
 
-// 可选依赖：用于打包 JAR
 let AdmZip;
 try {
     AdmZip = require('adm-zip');
 } catch (e) {
-    // 如果未安装，仅打包 JAR 时会报错，但不影响其他功能
 }
 
-// ==================== 加载配置文件 ====================
-const requireFromCwd = createRequire(__filename);
+const requireFromCwd = require('module').createRequire(__filename);
 let config;
 try {
     const rawConfig = requireFromCwd('./jukkit.config.js');
@@ -22,75 +19,37 @@ try {
     process.exit(1);
 }
 
-// 解构配置，提供默认值
 const {
     project = {},
     pluginPackage = null,
-    upload = null
+    upload = null,
+    templates = {},
+    targets = {}
 } = config;
 
 const {
-    defaultModuleDir = 'modules',
-    intry: entryFile,
-    output: outputJsFile
+    srcDir = 'src',
+    entry = 'index.js',
+    init = null,
+    assetsDir = 'assets',
+    modulesDir = 'modules',
+    output: outputJsFile,
+    target = 'common',
+    typescript = null
 } = project;
 
-if (!entryFile || !outputJsFile) {
-    console.error('❌ 配置文件缺少 project.intry 或 project.output 字段');
+const tsEnabled = typescript && typescript.enable === true;
+const tsConfigPath = typescript && typescript.configPath ? typescript.configPath : 'tsconfig.json';
+const tsEntry = typescript && typescript.entry ? typescript.entry : entry.replace(/\.js$/, '.ts');
+
+const initDir = init && init.dir ? init.dir : null;
+const initEntry = init && init.entry ? init.entry : 'init.js';
+
+if (!outputJsFile) {
+    console.error('❌ 配置文件缺少 project.output 字段');
     process.exit(1);
 }
 
-// ==================== 模块展开相关函数 ====================
-function getModulePath(moduleName) {
-    return path.resolve(defaultModuleDir, `${moduleName}.js`);
-}
-
-function readModuleRaw(moduleName) {
-    const filePath = getModulePath(moduleName);
-    try {
-        return fs.readFileSync(filePath, 'utf8');
-    } catch (err) {
-        console.error(`❌ 读取模块失败: ${filePath}\n`, err.message);
-        process.exit(1);
-    }
-}
-
-function expandContent(content, currentFilePath, processedStack = []) {
-    const lines = content.split(/\r?\n/);
-    const resultLines = [];
-
-    const includeRegex = /^\s*"include\s+([^"]+)"\s*;?\s*$/;
-    const includeAllRegex = /^\s*"includeAll\s+([^"]+)"\s*;?\s*$/;
-
-    for (let line of lines) {
-        let match;
-
-        if ((match = line.match(includeAllRegex))) {
-            const moduleName = match[1].trim();
-            const modulePath = getModulePath(moduleName);
-
-            if (processedStack.includes(modulePath)) {
-                console.error(`❌ 检测到循环依赖: ${modulePath}`);
-                console.error(`   调用栈: ${[...processedStack, modulePath].join(' -> ')}`);
-                process.exit(1);
-            }
-
-            const rawContent = readModuleRaw(moduleName);
-            const expanded = expandContent(rawContent, modulePath, [...processedStack, currentFilePath]);
-            resultLines.push(expanded);
-        } else if ((match = line.match(includeRegex))) {
-            const moduleName = match[1].trim();
-            const rawContent = readModuleRaw(moduleName);
-            resultLines.push(rawContent);
-        } else {
-            resultLines.push(line);
-        }
-    }
-
-    return resultLines.join('\n');
-}
-
-// ==================== HTTP 请求封装 ====================
 async function doRequest(method, baseUrl, options = {}) {
     const { headers = {}, body, query = {} } = options;
     const urlObj = new URL(baseUrl);
@@ -113,6 +72,8 @@ async function doRequest(method, baseUrl, options = {}) {
 
     const response = await fetch(url, fetchOptions);
     if (!response.ok) {
+        const text = await response.text();
+        console.error(`❌ 请求失败 (${response.status}): ${text}`);
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     const contentType = response.headers.get('content-type');
@@ -121,14 +82,12 @@ async function doRequest(method, baseUrl, options = {}) {
     } else {
         const text = await response.text();
         try {
-            const json = JSON.parse(text);
-            return json;
+            return JSON.parse(text);
         } catch { }
         return text;
     }
 }
 
-// ==================== 上传与日志拉取相关 ====================
 async function getUploadConfig(server, targetFile) {
     const uploadDir = path.posix.dirname(targetFile);
     const baseUrl = `${server.url}/api/files/upload`;
@@ -142,7 +101,7 @@ async function getUploadConfig(server, targetFile) {
     if (result.status !== 200) {
         throw new Error(`获取上传凭证失败: ${result.status}`);
     }
-    return result.data; // { password, addr }
+    return result.data;
 }
 
 async function uploadFileToDaemon(baseUrl, password, filePath) {
@@ -207,7 +166,7 @@ async function startLogPulling(uploadStartTime, serverConfig) {
         if (isFetching) return;
         isFetching = true;
         try {
-            const logs = await fetchRawLogs(serverConfig, 4 * 1024);
+            const logs = await fetchRawLogs(serverConfig, 16 * 1024);
             const lines = logs.split(/\r?\n/);
             const newOutputLines = [];
 
@@ -248,75 +207,210 @@ async function startLogPulling(uploadStartTime, serverConfig) {
     });
 }
 
-// ==================== JAR 打包函数 ====================
-async function buildJar(pluginCfg, mainJsPath) {
+function collectFiles(dir, baseDir = '') {
+    const files = [];
+    if (!fs.existsSync(dir)) {
+        return files;
+    }
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+    for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        const relativePath = baseDir ? `${baseDir}/${entry.name}` : entry.name;
+
+        if (entry.isDirectory()) {
+            files.push(...collectFiles(fullPath, relativePath));
+        } else if (entry.isFile()) {
+            files.push({
+                path: relativePath,
+                fullPath: fullPath
+            });
+        }
+    }
+
+    return files;
+}
+
+function computeHash(data) {
+    return crypto.createHash('sha256').update(data).digest('hex').substring(0, 16);
+}
+
+function createZipFast(files) {
+    const zip = new AdmZip();
+    for (const file of files) {
+        const content = fs.readFileSync(file.fullPath);
+        const zipPath = file.path.replace(/\\/g, '/');
+        zip.addFile(zipPath, content);
+    }
+    return zip;
+}
+
+function createAssetsZip(assetsDirPath) {
+    if (!fs.existsSync(assetsDirPath)) {
+        return null;
+    }
+    const files = collectFiles(assetsDirPath);
+    if (files.length === 0) {
+        return null;
+    }
+    const zip = createZipFast(files);
+    const zipBuffer = zip.toBuffer();
+    const hash = computeHash(zipBuffer);
+    return { zip, files, hash };
+}
+
+async function buildJar(pluginCfg, srcDir, entryFile, initFile, assetsZipInfo, initDir, templateJarPath, targetName) {
     if (!AdmZip) {
         console.error('❌ 缺少打包 JAR 所需的依赖 adm-zip。请运行 npm install adm-zip');
         process.exit(1);
     }
 
-    const { name, version, description, author, output: jarOutput, templateJar, dev } = pluginCfg;
+    const {
+        name,
+        version,
+        description,
+        author,
+        authors,
+        website,
+        prefix,
+        apiVersion,
+        load,
+        depend,
+        softdepend,
+        loadbefore,
+        output: jarOutput,
+        dev
+    } = pluginCfg;
 
-    // 查找模板 JAR
-    const templateJarPath = path.resolve(templateJar);
     if (!fs.existsSync(templateJarPath)) {
         console.error(`❌ 模板 JAR 不存在: ${templateJarPath}`);
         process.exit(1);
     }
 
-    // 确保输出目录存在
-    const outputDir = path.dirname(jarOutput);
+    let finalJarOutput = jarOutput;
+    if (targetName) {
+        const ext = path.extname(jarOutput);
+        const base = path.basename(jarOutput, ext);
+        const dir = path.dirname(jarOutput);
+        finalJarOutput = path.join(dir, `${base}-${targetName}${ext}`);
+    }
+
+    const outputDir = path.dirname(finalJarOutput);
     if (!fs.existsSync(outputDir)) {
         fs.mkdirSync(outputDir, { recursive: true });
     }
 
-    console.log(`📦 打包插件 JAR: ${name} v${version}${dev ? ' [DEV]' : ''}`);
+    console.log(`📦 打包插件 JAR: ${name} v${version}${dev ? ' [DEV]' : ''}${targetName ? ` [${targetName}]` : ''}`);
     console.log(`   模板: ${templateJarPath}`);
-    console.log(`   输出: ${jarOutput}`);
+    console.log(`   输出: ${finalJarOutput}`);
 
     const zip = new AdmZip(templateJarPath);
 
-    // 生成 plugin.json
     const pluginJson = {
         name,
         version,
         description: description || '',
         author: author || 'iyexin',
+        authors: authors || [],
+        website: website || '',
+        prefix: prefix || name,
         main: 'main.js',
-        apiVersion: '1.20',
-        dev: dev || false,
-        depends: [],
-        softDepends: []
+        apiVersion: apiVersion || '1.20',
+        load: load || 'POSTWORLD',
+        depend: depend || [],
+        softdepend: softdepend || [],
+        loadbefore: loadbefore || [],
+        dev: dev || false
     };
     zip.updateFile('plugin.json', Buffer.from(JSON.stringify(pluginJson, null, 4), 'utf8'));
 
-    // 生成 plugin.yml
-    const pluginYml = `name: ${name}
+    let pluginYml = `name: ${name}
 version: ${version}
 main: iyexin.jukkit.core.JsPluginTemplate
 description: ${description || ''}
-author: ${author || 'iyexin'}
-api-version: 1.20
 `;
+
+    if (authors && authors.length > 0) {
+        pluginYml += `authors: [${authors.map(a => `'${a}'`).join(', ')}]\n`;
+    } else if (author) {
+        pluginYml += `author: ${author}\n`;
+    }
+
+    if (website) {
+        pluginYml += `website: ${website}\n`;
+    }
+
+    if (prefix) {
+        pluginYml += `prefix: ${prefix}\n`;
+    }
+
+    pluginYml += `api-version: ${apiVersion || '1.20'}\n`;
+
+    if (load) {
+        pluginYml += `load: ${load}\n`;
+    }
+
+    if (depend && depend.length > 0) {
+        pluginYml += `depend: [${depend.map(d => `'${d}'`).join(', ')}]\n`;
+    }
+
+    if (softdepend && softdepend.length > 0) {
+        pluginYml += `softdepend: [${softdepend.map(d => `'${d}'`).join(', ')}]\n`;
+    }
+
+    if (loadbefore && loadbefore.length > 0) {
+        pluginYml += `loadbefore: [${loadbefore.map(d => `'${d}'`).join(', ')}]\n`;
+    }
+
     zip.updateFile('plugin.yml', Buffer.from(pluginYml, 'utf8'));
 
-    // 添加 main.js
-    if (!fs.existsSync(mainJsPath)) {
-        console.error(`❌ 主 JS 文件不存在: ${mainJsPath}`);
-        process.exit(1);
-    }
-    const mainJsContent = fs.readFileSync(mainJsPath, 'utf8');
-    zip.updateFile('main.js', Buffer.from(mainJsContent, 'utf8'));
+    const srcFiles = collectFiles(srcDir);
 
-    zip.writeZip(jarOutput);
-    console.log(`✅ JAR 打包完成: ${path.resolve(jarOutput)}`);
+    if (initDir && fs.existsSync(initDir)) {
+        const initFiles = collectFiles(initDir, 'init');
+        srcFiles.push(...initFiles);
+    }
+
+    const modulesZip = createZipFast(srcFiles);
+    const modulesZipBuffer = modulesZip.toBuffer();
+    const modulesHash = computeHash(modulesZipBuffer);
+
+    zip.deleteFile('.jukkit/modules.zip');
+    zip.addFile('.jukkit/modules.zip', modulesZipBuffer);
+    console.log(`   模块 ZIP 包含 ${srcFiles.length} 个文件`);
+    console.log(`   构建哈希: ${modulesHash}`);
+
+    const manifest = {
+        entryPoint: entryFile,
+        version: '1.2.0',
+        dependencies: {},
+        nodeCoreModules: [],
+        archive: 'modules.zip',
+        hash: modulesHash
+    };
+
+    if (initFile) {
+        manifest.init = initFile;
+    }
+
+    if (assetsZipInfo) {
+        zip.deleteFile('.jukkit/assets.zip');
+        zip.addFile('.jukkit/assets.zip', assetsZipInfo.zip.toBuffer());
+        manifest.assetsArchive = 'assets.zip';
+        manifest.assetsHash = assetsZipInfo.hash;
+        console.log(`   资源 ZIP 包含 ${assetsZipInfo.files.length} 个文件`);
+        console.log(`   资源哈希: ${assetsZipInfo.hash}`);
+    }
+
+    zip.deleteFile('.jukkit/manifest.json');
+    zip.addFile('.jukkit/manifest.json', Buffer.from(JSON.stringify(manifest, null, 2), 'utf8'));
+
+    zip.writeZip(finalJarOutput);
+    console.log(`✅ JAR 打包完成: ${path.resolve(finalJarOutput)}`);
 }
 
-// ==================== 远程目录检查 ====================
 async function checkRemoteDirectory(server, targetFilePath) {
-    // 提取目录路径（例如 /plugins/dev_QYMC/）
     const targetDir = path.posix.dirname(targetFilePath);
-    // 确保目录以 / 结尾（API 可能需要）
     const dirToCheck = targetDir.endsWith('/') ? targetDir : targetDir + '/';
 
     const baseUrl = `${server.url}/api/files/list`;
@@ -330,42 +424,193 @@ async function checkRemoteDirectory(server, targetFilePath) {
     };
 
     try {
-        const result = await doRequest('GET', baseUrl, { query });
+        await doRequest('GET', baseUrl, { query });
     } catch (err) {
-        // 请求失败视为目录不存在
         return false;
     }
 
     return true;
 }
 
-// ==================== 主流程 ====================
-(async () => {
-    // 1. 构建模块合并，生成 JS 文件
-    try {
-        const entryPath = path.resolve(entryFile);
-        const entryContent = fs.readFileSync(entryPath, 'utf8');
-        const finalContent = expandContent(entryContent, entryPath);
+function runRspack() {
+    return new Promise((resolve, reject) => {
+        console.log('\n🔧 运行 Rspack 编译...');
 
-        const outputDir = path.dirname(outputJsFile);
-        if (!fs.existsSync(outputDir)) {
-            fs.mkdirSync(outputDir, { recursive: true });
-        }
-        fs.writeFileSync(outputJsFile, finalContent, 'utf8');
-        console.log(`✅ 模块合并完成: ${outputJsFile}`);
-    } catch (err) {
-        console.error('❌ 构建失败：', err.message);
+        const rspack = spawn('npx', ['rspack', 'build', '--config', 'rspack.config.js'], {
+            cwd: process.cwd(),
+            shell: true,
+            stdio: 'inherit'
+        });
+
+        rspack.on('close', (code) => {
+            if (code === 0) {
+                console.log('✅ Rspack 编译完成');
+                resolve();
+            } else {
+                reject(new Error(`Rspack 编译失败，退出码: ${code}`));
+            }
+        });
+
+        rspack.on('error', (err) => {
+            reject(new Error(`Rspack 启动失败: ${err.message}`));
+        });
+    });
+}
+
+function runTypeScript() {
+    return new Promise((resolve, reject) => {
+        console.log('\n🔷 运行 TypeScript 编译...');
+
+        const tsc = spawn('npx', ['tsc', '-p', tsConfigPath], {
+            cwd: process.cwd(),
+            shell: true,
+            stdio: 'inherit'
+        });
+
+        tsc.on('close', (code) => {
+            if (code === 0) {
+                console.log('✅ TypeScript 编译完成');
+                resolve();
+            } else {
+                reject(new Error(`TypeScript 编译失败，退出码: ${code}`));
+            }
+        });
+
+        tsc.on('error', (err) => {
+            reject(new Error(`TypeScript 启动失败: ${err.message}`));
+        });
+    });
+}
+
+(async () => {
+    if (!AdmZip) {
+        console.error('❌ 缺少必要依赖 adm-zip。请运行 npm install adm-zip');
         process.exit(1);
     }
 
-    // 2. 如果配置了 pluginPackage，则打包 JAR
+    if (tsEnabled) {
+        console.log('🔷 TypeScript 模式已启用');
+        console.log(`   配置文件: ${tsConfigPath}`);
+        console.log(`   入口文件: ${tsEntry}`);
+
+        try {
+            await runTypeScript();
+        } catch (err) {
+            console.error(`❌ ${err.message}`);
+            process.exit(1);
+        }
+    }
+
+    try {
+        await runRspack();
+    } catch (err) {
+        console.error(`❌ ${err.message}`);
+        process.exit(1);
+    }
+
+    const rspackOutputDir = path.resolve('dist/rspack');
+    const rspackIndexFile = path.join(rspackOutputDir, 'index.js');
+
+    if (!fs.existsSync(rspackIndexFile)) {
+        console.error(`❌ Rspack 输出文件不存在: ${rspackIndexFile}`);
+        process.exit(1);
+    }
+
+    console.log(`\n📦 打包编译后的代码...`);
+    console.log(`   编译输出目录: ${rspackOutputDir}`);
+
+    const outputDir = path.dirname(outputJsFile);
+    if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
+    }
+
+    const files = collectFiles(rspackOutputDir);
+
+    if (initDir) {
+        const initDirPath = path.resolve(initDir);
+        if (fs.existsSync(initDirPath)) {
+            const initFiles = collectFiles(initDirPath, 'init');
+            files.push(...initFiles);
+            console.log(`   init 目录: ${initDir}`);
+            console.log(`   init 文件数: ${initFiles.length}`);
+        }
+    }
+
+    if (modulesDir) {
+        const modulesDirPath = path.resolve(modulesDir);
+        if (fs.existsSync(modulesDirPath)) {
+            const modulesFiles = collectFiles(modulesDirPath, 'modules');
+            files.push(...modulesFiles);
+            console.log(`   modules 目录: ${modulesDir}`);
+            console.log(`   modules 文件数: ${modulesFiles.length}`);
+        }
+    }
+
+    const zip = createZipFast(files);
+
+    const zipBuffer = zip.toBuffer();
+    const hash = computeHash(zipBuffer);
+
+    const manifest = {
+        entryPoint: 'index.js',
+        version: '1.2.0',
+        dependencies: {},
+        nodeCoreModules: [],
+        hash: hash
+    };
+
+    if (initDir) {
+        const initDirPath = path.resolve(initDir);
+        if (fs.existsSync(initDirPath)) {
+            manifest.init = 'init/' + initEntry;
+        }
+    }
+
+    const assetsDirPath = path.resolve(assetsDir);
+    const assetsZipInfo = createAssetsZip(assetsDirPath);
+
+    if (assetsZipInfo) {
+        zip.addFile('assets.zip', assetsZipInfo.zip.toBuffer());
+        manifest.assetsHash = assetsZipInfo.hash;
+        console.log(`   资源目录: ${assetsDir}`);
+        console.log(`   资源文件数: ${assetsZipInfo.files.length}`);
+    }
+
+    zip.addFile('manifest.json', Buffer.from(JSON.stringify(manifest, null, 2), 'utf8'));
+
+    fs.writeFileSync(outputJsFile, zip.toBuffer());
+    console.log(`✅ 模块 ZIP 生成完成: ${outputJsFile}`);
+    console.log(`   包含 ${files.length} 个文件`);
+    console.log(`   构建哈希: ${hash}`);
+
     if (pluginPackage) {
-        await buildJar(pluginPackage, outputJsFile);
+        const initManifestPath = initDir && fs.existsSync(path.resolve(initDir)) ? 'init/' + initEntry : null;
+
+        const targetList = Array.isArray(target) ? target : [target];
+
+        for (const targetName of targetList) {
+            const templatePath = templates[targetName];
+            if (!templatePath) {
+                console.error(`❌ 未找到目标 "${targetName}" 的模板配置`);
+                console.error(`   可用的模板: ${Object.keys(templates).join(', ')}`);
+                process.exit(1);
+            }
+
+            const templateJarPath = path.resolve(templatePath);
+            if (!fs.existsSync(templateJarPath)) {
+                console.error(`❌ 模板 JAR 不存在: ${templateJarPath}`);
+                process.exit(1);
+            }
+
+            const targetConfig = targets[targetName] || {};
+            const mergedPluginPackage = { ...pluginPackage, ...targetConfig };
+
+            await buildJar(mergedPluginPackage, rspackOutputDir, 'index.js', initManifestPath, assetsZipInfo, initDir, templateJarPath, targetList.length > 1 ? targetName : null);
+        }
     } else {
         console.log('ℹ️ 未配置 pluginPackage，跳过 JAR 打包');
     }
 
-    // 3. 处理上传
     if (upload && upload.enable) {
         const { server, targetFile, autoPullLogs } = upload;
         if (!server || !targetFile) {
@@ -373,7 +618,6 @@ async function checkRemoteDirectory(server, targetFilePath) {
             process.exit(0);
         }
 
-        // 检查是否 dev 模式且需要检查目录存在
         const isDev = pluginPackage && pluginPackage.dev === true;
         if (isDev) {
             console.log(`🔍 检查远程目录是否存在: ${path.posix.dirname(targetFile)}`);
@@ -383,36 +627,32 @@ async function checkRemoteDirectory(server, targetFilePath) {
                 console.error('   请先上传 dev 版本插件（JAR）并重启服务器，然后重试。');
                 process.exit(1);
             } else {
-                console.log('✅ 远程目录存在，可以上传 JS 文件');
+                console.log('✅ 远程目录存在，可以上传模块 ZIP');
             }
         }
 
-        console.log(`\n📤 准备上传文件到 ${server.url}`);
+        console.log(`\n📤 准备上传模块 ZIP 到 ${server.url}`);
         const uploadStartTime = Math.floor(Date.now() / 1000);
 
         try {
-            // 获取上传凭证
             const { password, addr } = await getUploadConfig(server, targetFile);
             console.log(`   获取凭证成功，原始上传主机地址: ${addr}`);
 
-            // 解析端口
             let port = '80';
             if (addr.includes(':')) {
                 const parts = addr.split(':');
                 port = parts[1];
             }
 
-            // 从配置的 server.url 中提取域名
             const serverUrlObj = new URL(server.url);
             const serverHostname = serverUrlObj.hostname;
             const uploadBaseUrl = `http://${serverHostname}:${port}`;
             console.log(`   自动填充公网地址: ${uploadBaseUrl}`);
 
-            // 上传 JS 文件
             const result = await uploadFileToDaemon(uploadBaseUrl, password, outputJsFile);
             console.log(`   ✅ 上传成功: ${result}`);
+            console.log(`   📦 ZIP 包含所有模块和资源，热重载将加载完整代码`);
 
-            // 如果启用自动拉取日志
             if (autoPullLogs) {
                 await startLogPulling(uploadStartTime, server);
             } else {
@@ -422,7 +662,5 @@ async function checkRemoteDirectory(server, targetFilePath) {
             console.error(`❌ 上传失败: ${err.message}`);
             process.exit(1);
         }
-    } else {
-        console.log('ℹ️ 未启用文件上传');
     }
 })();

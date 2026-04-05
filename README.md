@@ -5,27 +5,49 @@
 ## 特性
 
 - **无需 Java 环境** - 仅需 JavaScript 即可开发插件
+- **现代语法支持** - 内置 Rspack + Babel，支持完整的 ES6+ 语法
 - **Dev 模式** - 开发时支持热重载，无需重复部署 JAR
-- **现代 API** - 简洁优雅的 API 设计，支持 Promise
 - **TypeScript 类型支持** - 拥有较为完整的类型定义，支持编辑器代码补全
+- **可选 TypeScript 编译** - 支持使用 TypeScript 编写插件，类型安全
 - **产物为标准 JAR** - 生成的 JAR 文件可直接加载到 Minecraft 服务器
 - **远程部署** - 支持 MCSManager 自动上传
-- **产物兼容性** - 生成的 Jar 可直接在 Paper/Spigot/Bukkit 等服务器上运行，理论上支持 Minecraft 1.13+ 版本。
+- **多目标编译** - 支持 Standalone 和 Common 两种版本，按需选择
 
 ![编辑器自动补全](./docs/img/1.png)
 
-图：编辑器自动加载 Typescript 类型定义文件后自动启用智能补全
+## 文档
 
-## 快速开始
+- **[快速开始](./docs/快速开始.md)** - 快速上手 Jukkit 开发
+- **[进阶知识](./docs/进阶知识.md)** - 深入了解构建配置、init 机制、模块系统等
+- **[API 文档](./docs/API.md)** - 完整的 Jukkit API 参考
+- **[库模块文档](./docs/LIBS.md)** - 内置库模块详细文档
 
-### 环境要求
+## 快速预览
+
+```javascript
+// src/index.js
+jukkit.onEnable(() => {
+    // 注册命令
+    jukkit.command('hello', (sender) => {
+        sender.sendMessage('§aHello, ' + sender.getName() + '!');
+        return true;
+    });
+
+    // 监听事件
+    jukkit.on('PlayerJoinEvent', (event) => {
+        event.getPlayer().sendMessage('§e欢迎来到服务器!');
+    });
+
+    return true;
+});
+```
+
+## 环境要求
 
 - Node.js 16+
 - Minecraft 服务器（支持 Bukkit/Spigot/Paper 等）
 
-### 开发流程
-
-#### 1. 克隆仓库并安装依赖
+## 安装
 
 ```bash
 git clone https://github.com/iYeXin/Jukkit.git
@@ -33,309 +55,80 @@ cd Jukkit
 npm install
 ```
 
-#### 2. 配置项目
+## 版本选择
 
-编辑 `jukkit.config.js` 文件，修改插件信息：
+Jukkit 1.3.0+ 提供两种编译目标：
+
+### Standalone 版本
+
+- ✅ 内嵌 Nashorn JavaScript 引擎
+- ✅ 无需任何前置插件
+- ✅ 开箱即用
+- ❌ 不支持 Vert.x 网络库
+
+### Common 版本
+
+- ✅ 支持 Vert.x 网络库
+- ✅ 多插件共享依赖，体积更小
+- ⚠️ 需要 Jukkit-Common 前置插件
+
+在 `jukkit.config.js` 中配置：
 
 ```javascript
-module.exports = {
-    project: {
-        defaultModuleDir: 'src/modules',
-        intry: 'src/index.js',
-        output: 'dist/source/main.js',
-    },
-    pluginPackage: {
-        name: 'MyPlugin',           // 改成你的插件名称
-        version: '1.0.0',
-        description: 'My plugin',
-        author: 'YourName',         // 改成你的名字
-        output: 'dist/MyPlugin-1.0.0.jar',
-        templateJar: 'jukkit-template-1.0.0.jar',
-        dev: true
-    },
-    upload: {
-        enable: false,              // 需要自动上传时改为 true
-        // ... 更多配置见 docs/MCSMANAGER_UPLOAD.md
-    }
+project: {
+    target: 'standalone'  // 或 'common'，或 ['standalone', 'common'] 同时编译
 }
 ```
 
-#### 3. 编写插件功能
+## 前置插件（仅 Common 版本需要）
 
-**只需修改 `src/modules/functions/hello.js` 文件即可开始开发！**
+如果使用 Common 版本，需要将 `jukkit-common-1.3.0.jar` 放入服务器的 `plugins` 目录。
 
-```javascript
-// src/modules/functions/hello.js
-(() => {
-    const logger = new Logger('Hello');
+> Jukkit-Common 提供了 Nashorn JavaScript 引擎和 Vert.x 的共享实例，多个 Jukkit 插件可以共用同一份依赖，大幅减少总体积。
 
-    // 注册一个命令
-    jukkit.command('hello', (sender, cmd, label, args) => {
-        sender.sendMessage('§aHello, ' + sender.getName() + '!');
-        return true;
-    });
+## 开发流程
 
-    // 监听玩家加入事件
-    jukkit.on('PlayerJoinEvent', (event) => {
-        const player = event.getPlayer();
-        player.sendMessage('§e欢迎来到服务器!');
-    });
+1. 修改 `jukkit.config.js` 配置插件信息
+2. 在 `src/` 目录下编写代码
+3. 运行 `npm run build` 构建
+4. 部署生成的 JAR 文件到服务器
 
-    logger.info('Hello 模块已加载');
-})();
-```
-
-#### 4. 构建项目
-
-```bash
-npm run build
-```
-
-构建完成后，`dist/` 目录下会生成：
-- `source/main.js` - 合并后的脚本文件
-- `MyPlugin-1.0.0.jar` - 可直接使用的插件 JAR
+详细步骤请参阅 [快速开始](./docs/快速开始.md)。
 
 ## 项目结构
 
 ```
 Jukkit/
+├── init/                 # 初始化脚本（无需修改）
+├── modules/              # 模块目录（可直接 require 引入）
 ├── src/
-│   ├── index.js              # 入口文件
-│   └── modules/
-│       ├── libs/             # 核心库（无需修改）
-│       ├── functions/        # 功能模块（在这里编写你的插件）
-│       │   └── hello.js      # 示例：你的第一个功能
-├── types/                    # TypeScript 类型定义
-├── docs/                     # 文档
-├── dist/                     # 构建产物
-├── jukkit-build.js           # 构建脚本
-└── jukkit.config.js          # 项目配置
+│   ├── index.js          # 入口文件
+│   └── assets/           # 资源目录
+├── types/                # TypeScript 类型定义
+├── docs/                 # 文档
+└── jukkit.config.js      # 项目配置
 ```
 
-## 模块系统
+## 内置库模块
 
-项目使用 `include` 和 `includeAll` 指令组织代码：
+| 模块     | 说明                       |
+| -------- | -------------------------- |
+| `fs`     | 文件系统（读写、监听、流） |
+| `http`   | HTTP 服务器                |
+| `fetch`  | HTTP 请求                  |
+| `Logger` | 日志工具类                 |
 
-Note: `include` 和 `includeAll` 指令在语法上是单行的字符串
-
-```javascript
-// 引入单个模块
-"include libs/fs"
-
-// 引入模块索引文件（展开其中的所有 include）
-"includeAll functions"
-```
-
-### 创建新功能模块
-
-1. 在 `src/modules/functions/` 创建新文件，如 `myFeature.js`
-2. 在 `src/modules/functions.js` 中添加引用：
-
-```javascript
-jukkit.onEnable(() => {
-    "include functions/hello"       // 已有模块
-    "include functions/myFeature"   // 新增模块
-});
-```
-
-### 运行时语法支持
-
-支持大部分 ES6 语法：`Promise`、`箭头函数`、`let/const` 等。
-
-不支持：`class`、`async/await`。如需使用，建议配合 Babel 编译。
-
-## API 文档
-
-详细 Jukkit API 文档请参阅 [API.md](./API.md)。
-
-### 核心全局对象
-
-| 对象     | 说明              |
-| -------- | ----------------- |
-| `jukkit` | Jukkit API 主对象 |
-| `bukkit` | Bukkit 类引用     |
-| `server` | 当前服务器实例    |
-| `plugin` | 当前插件实例      |
-
-### 生命周期
-
-```javascript
-jukkit.onLoad((plugin) => { /* 加载时 */ });
-jukkit.onEnable((plugin) => { return true; });  // 必须返回 true
-jukkit.onDisable((plugin) => { /* 禁用时 */ });
-jukkit.onUnload(() => { /* 卸载时 */ });
-```
-
-### 事件监听
-
-```javascript
-jukkit.on("PlayerJoinEvent", (event) => {
-    event.getPlayer().sendMessage("欢迎!");
-});
-
-jukkit.on("BlockBreakEvent", "HIGH", (event) => {
-    event.setCancelled(true);  // 取消事件
-});
-```
-
-### 命令注册
-
-```javascript
-jukkit.command("hello", (sender, cmd, label, args) => {
-    sender.sendMessage("Hello!");
-    return true;
-});
-```
-
-### 任务调度
-
-```javascript
-// 主线程（Tick 级，1 tick = 50ms）
-jukkit.runTask(() => { });
-jukkit.runTaskLater(20, () => { });      // 1秒后
-jukkit.runTaskTimer(20, () => { });      // 每秒
-
-// 异步线程（毫秒级）
-jukkit.runAsync(() => { });
-jukkit.runAsyncLater(1000, () => { });   // 1秒后
-jukkit.runAsyncTimer(1000, () => { });   // 每秒
-
-// 取消任务
-const id = jukkit.runTaskTimer(20, () => {});
-jukkit.cancelTask(id);
-```
-
-### 数据存储
-
-```javascript
-jukkit.store("key", value);
-const data = jukkit.get("key");
-jukkit.has("key");
-jukkit.remove("key");
-```
-
-## 内置能力
-
-Jukkit 提供以下开箱即用的能力：
-
-| 能力                                  | 说明                                           |
-| ------------------------------------- | ---------------------------------------------- |
-| `fetch(url)`                          | HTTP 请求，返回 Promise                        |
-| `http.createServer(port, handler)`    | 创建 HTTP 服务器                               |
-| `fs.readFileSync()` / `fs.readFile()` | 文件读写（类似 Node.js fs 模块，支持同步读写） |
-| `setTimeout()` / `setInterval()`      | 定时器                                         |
-| `Promise`                             | 异步编程支持                                   |
-| `Logger(name)`                        | 日志工具类                                     |
-| `bindEvent('unload', fn)`             | 注册卸载回调                                   |
-
-上述能力均已在全局暴露，可直接使用。
-
-### 示例：HTTP 请求
-
-```javascript
-fetch('https://api.example.com/data')
-    .then(res => res.json())
-    .then(data => {
-        jukkit.runTask(() => {
-            player.sendMessage(data.message);
-        });
-    });
-```
-
-### 示例：定时任务
-
-```javascript
-let taskId = null;
-
-jukkit.onEnable(() => {
-    taskId = jukkit.runTaskTimer(20, () => {
-        // 每秒执行
-    });
-    return true;
-});
-
-jukkit.onDisable(() => {
-    if (taskId) jukkit.cancelTask(taskId);
-});
-```
-
-### 示例：文件读写
-
-```javascript
-// 读取文件
-const data = fs.readFileSync("plugins/myPlugin/config.json"); // 相对路径的基准是服务器根目录
-console.log(data);
-
-// 写入文件
-fs.writeFileSync("plugins/myPlugin/config.json", JSON.stringify({ key: "value" })); // 相对路径的基准是服务器根目录
-```
-
-### 示例：日志
-
-```javascript
-// logger.js
-const logger = new Logger("MyPlugin-Function1");
-logger.info("这是一条 info 日志");
-
-/*
-输出类似：
-[12:00:00] [MyPlugin-Function1] 这是一条 info 日志
-*/
-```
-
-## Dev 模式
-
-Dev 模式支持热重载，无需重复部署 JAR：
-
-1. 首次构建 JAR 并部署到服务器
-2. 插件启动时在 `/plugins/dev_{pluginName}/` 生成 `main.js`
-3. 后续只需上传新的 `main.js` 即可热重载
-
-## 远程部署
-
-支持 MCSManager 自动上传，详见 [MCSManager 上传指南](./docs/MCSMANAGER_UPLOAD.md)。
-
-## TypeScript 支持
-
-```javascript
-/// <reference path="./index.d.ts" />
-
-jukkit.on("PlayerJoinEvent", (event) => {
-    // event 类型自动推断，支持代码补全
-    const player = event.getPlayer();
-});
-```
-
-## TODO
-
-### 模块系统
-
-- [ ] 引入 CJS/ESM 模块系统，支持 `require()` 和 `import`
-- [ ] 使用 Java 实现 Node.js 核心模块，复用 NPM 生态
-- [ ] 支持 `node_modules` 和 `package.json` 依赖管理
-
-### JavaScript 引擎
-
-- [ ] 引入可选引擎支持，如 GraalJS（高性能，支持最新 ES 标准）
-
-### 开发体验
-
-- [ ] Source Map 调试支持
-- [ ] 集成测试框架
-- [ ] 热重载时保留插件状态
+详见 [库模块文档](./docs/LIBS.md)。
 
 ## 相关项目
 
+- **Jukkit-Common** - 前置插件，提供 Nashorn 引擎和 Vert.x 的共享实例（仅 Common 版本需要）
 - **Jukkit-Template** - JAR 模板项目，包含 Java 运行时类
 
 ## 致谢
 
-本项目的理念源于 **OpenJavascript** 插件（https://gitlab.com/spidermodders/openjs），这是一个允许运行 JavaScript 脚本以控制服务器逻辑的创新项目。
-
-## 作者
-
-iYeXin
+本项目的理念源于 **OpenJavascript** 插件（https://gitlab.com/spidermodders/openjs），这是一个允许运行 JavaScript 脚本以控制服务器插件。
 
 ## 许可证
 
-MIT
+MIT License

@@ -4,16 +4,9 @@
 // 注意：此文件使用环境声明，类型从 classes.d.ts 全局可用
 
 /**
- * 事件优先级
+ * 事件优先级（字符串字面量类型）
  */
-declare enum EventPriority {
-    LOWEST = "LOWEST",
-    LOW = "LOW",
-    NORMAL = "NORMAL",
-    HIGH = "HIGH",
-    HIGHEST = "HIGHEST",
-    MONITOR = "MONITOR"
-}
+type EventPriority = "LOWEST" | "LOW" | "NORMAL" | "HIGH" | "HIGHEST" | "MONITOR";
 
 /**
  * 事件基类

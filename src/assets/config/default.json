@@ -1,0 +1,10 @@
+{
+    "plugin": {
+        "name": "MyPlugin",
+        "version": "1.0.0"
+    },
+    "settings": {
+        "debug": false,
+        "maxPlayers": 100
+    }
+}

@@ -226,3 +226,108 @@ declare const plugin: JsPluginTemplate;
  * 提供所有 Jukkit 框架 API
  */
 declare const jukkit: JukkitAPI;
+
+// ========== Polyfill 全局对象（通过 init.js 预挂载） ==========
+
+/**
+ * 全局对象，用于挂载全局变量
+ * @example
+ * globalThis.myHelper = function() { ... };
+ * globalThis.API_BASE = 'https://api.example.com';
+ */
+declare var globalThis: typeof globalThis & {
+    [key: string]: any;
+};
+
+/**
+ * Promise 构造函数（通过 polyfill 提供）
+ * @example
+ * new Promise((resolve, reject) => { ... });
+ * Promise.all([p1, p2, p3]);
+ * Promise.resolve(value);
+ */
+declare var Promise: PromiseConstructor;
+
+/**
+ * 延迟执行函数（通过 polyfill 提供）
+ * @param callback 回调函数
+ * @param delay 延迟毫秒数
+ * @param args 传递给回调的参数
+ * @returns 定时器 ID
+ */
+declare function setTimeout(callback: (...args: any[]) => void, delay: number, ...args: any[]): number;
+
+/**
+ * 定时执行函数（通过 polyfill 提供）
+ * @param callback 回调函数
+ * @param delay 间隔毫秒数
+ * @param args 传递给回调的参数
+ * @returns 定时器 ID
+ */
+declare function setInterval(callback: (...args: any[]) => void, delay: number, ...args: any[]): number;
+
+/**
+ * 清除延迟定时器
+ * @param timerId 定时器 ID
+ */
+declare function clearTimeout(timerId: number): void;
+
+/**
+ * 清除间隔定时器
+ * @param timerId 定时器 ID
+ */
+declare function clearInterval(timerId: number): void;
+
+/**
+ * 立即执行函数（通过 polyfill 提供）
+ * @param callback 回调函数
+ * @param args 传递给回调的参数
+ * @returns 立即执行 ID
+ */
+declare function setImmediate(callback: (...args: any[]) => void, ...args: any[]): number;
+
+/**
+ * 清除立即执行
+ * @param immediateId 立即执行 ID
+ */
+declare function clearImmediate(immediateId: number): void;
+
+/**
+ * fetch 函数（通过 init.js 预挂载）
+ * @param url 请求 URL
+ * @param options 请求选项
+ * @returns Promise<Response>
+ */
+declare function fetch(url: string, options?: {
+    method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+    headers?: Record<string, string>;
+    body?: string | object;
+    timeout?: number;
+}): Promise<Response>;
+
+/**
+ * console 对象（通过 init.js 预挂载）
+ * 仅用于快速调试，生产环境建议使用 Logger 类或 jukkit.log 方法
+ */
+declare var console: {
+    log(message?: any, ...optionalParams: any[]): void;
+    info(message?: any, ...optionalParams: any[]): void;
+    warn(message?: any, ...optionalParams: any[]): void;
+    error(message?: any, ...optionalParams: any[]): void;
+};
+
+/**
+ * Response 对象（fetch 返回）
+ */
+interface Response {
+    status: number;
+    statusText: string;
+    ok: boolean;
+    headers: Record<string, string>;
+    text(): Promise<string>;
+    json(): Promise<any>;
+    base64(): Promise<string>;
+    arrayBuffer(): Promise<any>;
+    blob(): Promise<{ type: string; size: number; data: any }>;
+    getHeader(name: string): string | null;
+}

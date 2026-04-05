@@ -9,3 +9,4 @@
 /// <reference path="./types/jukkit.d.ts" />
 /// <reference path="./types/classes.d.ts" />
 /// <reference path="./types/events.d.ts" />
+/// <reference path="./types/config.d.ts" />

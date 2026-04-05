@@ -1,5 +1,13 @@
-"includeAll libs"
+/// <reference path="../index.d.ts" />
 
-"includeAll functions"
+const hello = require('./hello');
 
-"includeAll test"
+jukkit.log('插件正在加载');
+
+jukkit.onEnable(function () {
+    hello.init();
+});
+
+jukkit.onDisable(function () {
+    jukkit.log('插件已卸载');
+});
