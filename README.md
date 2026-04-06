@@ -96,6 +96,8 @@ project: {
 
 如果使用 Common 版本，需要将 `jukkit-common-1.3.0.jar` 放入服务器的 `plugins` 目录。
 
+Modrinth 地址：[https://modrinth.com/plugin/jukkit-common](https://modrinth.com/plugin/jukkit-common)
+
 > Jukkit-Common 提供了 Nashorn JavaScript 引擎和 Vert.x 的共享实例，多个 Jukkit 插件可以共用同一份依赖，大幅减少总体积。
 
 ## 开发流程
@@ -140,8 +142,8 @@ Jukkit/
 
 ## 相关项目
 
-- **Jukkit-Common** - 前置插件，提供 Nashorn 引擎和 Vert.x 的共享实例（仅 Common 版本需要）
-- **Jukkit-Template** - JAR 模板项目，包含 Java 运行时类
+- **[Jukkit-Common](https://github.com/iYeXin/Jukkit-Common/)** - 前置插件，提供 Nashorn 引擎和 Vert.x 的共享实例（仅 Common 版本需要）
+- **[Jukkit-Template](https://github.com/iYeXin/Jukkit-Template/)** - JAR 模板项目，包含 Java 运行时类
 
 ## 致谢
 
