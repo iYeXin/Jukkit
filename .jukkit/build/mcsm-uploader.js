@@ -107,13 +107,13 @@ function computeLineHash(lines, index) {
 }
 
 async function startLogPulling(uploadStartTime, serverConfig) {
-    const startTimeSec = (uploadStartTime) % 86400;
-    console.log(`\n开始拉取日志（起始时间: ${startTimeSec}）`);
+    const now = new Date();
+    const localTimeSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+    const startTimeSec = (localTimeSec - 5 + 86400) % 86400;
+    console.log(`\n开始拉取日志（起始时间: ${now.toLocaleTimeString()}）`);
     let lastProcessedTime = startTimeSec;
     let processedHashes = new Set();
     let isFetching = false;
-
-    console.log(`\n开始拉取日志（起始时间: ${new Date(uploadStartTime * 1000).toLocaleTimeString()}）`);
 
     async function pullOnce() {
         if (isFetching) return;

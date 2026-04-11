@@ -24,7 +24,7 @@ declare interface Plugin {
 /**
  * 插件描述文件
  */
-export interface PluginDescriptionFile {
+declare interface PluginDescriptionFile {
     getName(): string;
     getVersion(): string;
     getMain(): string;
@@ -38,7 +38,7 @@ export interface PluginDescriptionFile {
 /**
  * 服务器接口
  */
-export interface Server {
+declare interface Server {
     getName(): string;
     getVersion(): string;
     getBukkitVersion(): string;
@@ -76,7 +76,7 @@ export interface Server {
 /**
  * 命令发送者接口
  */
-export interface CommandSender {
+declare interface CommandSender {
     getName(): string;
     sendMessage(message: string): void;
     sendMessage(messages: string[]): void;
@@ -96,13 +96,13 @@ export interface CommandSender {
 /**
  * 控制台命令发送者
  */
-export interface ConsoleCommandSender extends CommandSender {
+declare interface ConsoleCommandSender extends CommandSender {
 }
 
 /**
  * 玩家接口
  */
-export interface Player extends HumanEntity, OfflinePlayer {
+declare interface Player extends HumanEntity, OfflinePlayer {
     getLocation(): Location;
     getWorld(): World;
     getX(): number;
@@ -183,7 +183,7 @@ export interface Player extends HumanEntity, OfflinePlayer {
 /**
  * 人类实体（玩家和 NPC）
  */
-export interface HumanEntity extends LivingEntity {
+declare interface HumanEntity extends LivingEntity {
     getInventory(): Inventory;
     getEnderChest(): Inventory;
     getItemInHand(): ItemStack;
@@ -200,7 +200,7 @@ export interface HumanEntity extends LivingEntity {
 /**
  * 离线玩家接口
  */
-export interface OfflinePlayer {
+declare interface OfflinePlayer {
     getName(): string;
     getUniqueId(): UUID;
     isOnline(): boolean;
@@ -216,7 +216,7 @@ export interface OfflinePlayer {
 /**
  * 实体接口
  */
-export interface Entity {
+declare interface Entity {
     getEntityId(): number;
     getUniqueId(): UUID;
     getName(): string;
@@ -265,7 +265,7 @@ export interface Entity {
 /**
  * 生物接口
  */
-export interface LivingEntity extends Entity {
+declare interface LivingEntity extends Entity {
     getNoDamageTicks(): number;
     setNoDamageTicks(ticks: number): void;
     getMaximumNoDamageTicks(): number;
@@ -294,7 +294,7 @@ export interface LivingEntity extends Entity {
 /**
  * 生物类型枚举
  */
-export enum EntityType {
+declare enum EntityType {
     PLAYER,
     DROPPED_ITEM,
     EXPERIENCE_ORB,
@@ -347,7 +347,7 @@ export enum EntityType {
 /**
  * 世界接口
  */
-export interface World {
+declare interface World {
     getName(): string;
     getUID(): UUID;
     getSeed(): number;
@@ -391,7 +391,7 @@ export interface World {
 /**
  * 位置
  */
-export interface Location {
+declare interface Location {
     getWorld(): World;
     setWorld(world: World): void;
     getX(): number;
@@ -423,7 +423,7 @@ export interface Location {
 /**
  * 向量
  */
-export interface Vector {
+declare interface Vector {
     getX(): number;
     getY(): number;
     getZ(): number;
@@ -449,7 +449,7 @@ export interface Vector {
 /**
  * 方块
  */
-export interface Block {
+declare interface Block {
     getX(): number;
     getY(): number;
     getZ(): number;
@@ -489,7 +489,7 @@ export interface Block {
 /**
  * 方块状态
  */
-export interface BlockState {
+declare interface BlockState {
     getBlock(): Block;
     getType(): Material;
     update(): boolean;
@@ -510,7 +510,7 @@ export interface BlockState {
 /**
  * 物品堆
  */
-export interface ItemStack {
+declare interface ItemStack {
     getType(): Material;
     setType(type: Material): void;
     getAmount(): number;
@@ -537,7 +537,7 @@ export interface ItemStack {
 /**
  * 物品元数据
  */
-export interface ItemMeta {
+declare interface ItemMeta {
     getDisplayName(): string;
     setDisplayName(name: string): void;
     getLore(): string[];
@@ -556,7 +556,7 @@ export interface ItemMeta {
 /**
  * 材料
  */
-export interface Material {
+declare interface Material {
     name(): string;
     getId(): number;
     getMaxStackSize(): number;
@@ -577,7 +577,7 @@ export interface Material {
 /**
  * 方块数据
  */
-export interface BlockData {
+declare interface BlockData {
     getMaterial(): Material;
     getAsString(): string;
     getAsString(verbose: boolean): string;
@@ -589,7 +589,7 @@ export interface BlockData {
 /**
  *  inventory
  */
-export interface Inventory {
+declare interface Inventory {
     getSize(): number;
     getContents(): ItemStack[];
     getStorageContents(): ItemStack[];
@@ -620,7 +620,7 @@ export interface Inventory {
 /**
  * 玩家物品栏
  */
-export interface PlayerInventory extends Inventory {
+declare interface PlayerInventory extends Inventory {
     getHelmet(): ItemStack;
     setHelmet(helmet: ItemStack): void;
     getChestplate(): ItemStack;
@@ -643,27 +643,27 @@ export interface PlayerInventory extends Inventory {
 
 // ========== 其他枚举和类型 ==========
 
-export enum GameMode {
+declare enum GameMode {
     SURVIVAL,
     CREATIVE,
     ADVENTURE,
     SPECTATOR
 }
 
-export enum Difficulty {
+declare enum Difficulty {
     PEACEFUL,
     EASY,
     NORMAL,
     HARD
 }
 
-export enum Environment {
+declare enum Environment {
     NORMAL,
     NETHER,
     THE_END
 }
 
-export enum WorldType {
+declare enum WorldType {
     NORMAL,
     FLAT,
     LARGE_BIOMES,
@@ -671,7 +671,7 @@ export enum WorldType {
     CUSTOMIZED
 }
 
-export enum Biome {
+declare enum Biome {
     OCEAN,
     PLAINS,
     DESERT,
@@ -685,7 +685,7 @@ export enum Biome {
     // ... 更多生物群系
 }
 
-export enum BlockFace {
+declare enum BlockFace {
     NORTH,
     SOUTH,
     EAST,
@@ -707,12 +707,12 @@ export enum BlockFace {
     SELF
 }
 
-export enum Hand {
+declare enum Hand {
     MAIN_HAND,
     OFF_HAND
 }
 
-export enum InventoryType {
+declare enum InventoryType {
     CHEST,
     DISPENSER,
     DROPPER,
@@ -739,7 +739,7 @@ export enum InventoryType {
     LOOM
 }
 
-export enum Effect {
+declare enum Effect {
     MOBSPAWNER_PARTICLES,
     STEP_SOUND,
     VILLAGER_PLANT_GROW,
@@ -747,7 +747,7 @@ export enum Effect {
     // ... 更多效果
 }
 
-export enum Particle {
+declare enum Particle {
     EXPLOSION_NORMAL,
     EXPLOSION_LARGE,
     EXPLOSION_HUGE,
@@ -762,7 +762,7 @@ export enum Particle {
     // ... 更多粒子
 }
 
-export enum Sound {
+declare enum Sound {
     AMBIENT_CAVE,
     BLOCK_ANVIL_BREAK,
     BLOCK_ANVIL_DESTROY,
@@ -775,7 +775,7 @@ export enum Sound {
     // ... 更多声音
 }
 
-export enum PotionEffectType {
+declare enum PotionEffectType {
     SPEED,
     SLOW,
     FAST_DIGGING,
@@ -815,7 +815,7 @@ export enum PotionEffectType {
 /**
  * 插件管理器
  */
-export interface PluginManager {
+declare interface PluginManager {
     getPlugins(): Plugin[];
     getPlugin(name: string): Plugin | null;
     getPermission(name: string): Permission | null;
@@ -836,7 +836,7 @@ export interface PluginManager {
 /**
  * Bukkit 调度器
  */
-export interface BukkitScheduler {
+declare interface BukkitScheduler {
     scheduleSyncDelayedTask(plugin: Plugin, task: Runnable, delay: number): number;
     scheduleSyncRepeatingTask(plugin: Plugin, task: Runnable, delay: number, period: number): number;
     scheduleAsyncDelayedTask(plugin: Plugin, task: Runnable, delay: number): number;
@@ -850,19 +850,19 @@ export interface BukkitScheduler {
 /**
  * 事件监听器
  */
-export interface EventListener {
+declare interface EventListener {
 }
 
 /**
  * 插件加载器
  */
-export interface PluginLoader {
+declare interface PluginLoader {
 }
 
 /**
  * 命令
  */
-export interface Command {
+declare interface Command {
     getName(): string;
     getDescription(): string;
     getUsage(): string;
@@ -883,7 +883,7 @@ export interface Command {
 /**
  * 配置节
  */
-export interface ConfigurationSection {
+declare interface ConfigurationSection {
     get(path: string): any;
     set(path: string, value: any): void;
     contains(path: string): boolean;
@@ -910,7 +910,7 @@ export interface ConfigurationSection {
 /**
  * 文件配置
  */
-export interface FileConfiguration extends ConfigurationSection {
+declare interface FileConfiguration extends ConfigurationSection {
     save(file: File): void;
     saveToString(): string;
     load(file: File): void;
@@ -921,7 +921,7 @@ export interface FileConfiguration extends ConfigurationSection {
 /**
  * 配置选项
  */
-export interface ConfigurationOptions {
+declare interface ConfigurationOptions {
     copyDefaults(): boolean;
     copyDefaults(value: boolean): ConfigurationOptions;
     pathSeparator(): string;
@@ -937,7 +937,7 @@ export interface ConfigurationOptions {
 /**
  * 权限
  */
-export interface Permission {
+declare interface Permission {
     getName(): string;
     getDescription(): string;
     getChildren(): Map<string, boolean>;
@@ -954,7 +954,7 @@ export interface Permission {
 /**
  * 权限默认值
  */
-export enum PermissionDefault {
+declare enum PermissionDefault {
     TRUE,
     FALSE,
     OP,
@@ -964,7 +964,7 @@ export enum PermissionDefault {
 /**
  * 权限附加
  */
-export interface PermissionAttachment {
+declare interface PermissionAttachment {
     getPermissions(): Map<string, boolean>;
     setPermission(name: string, value: boolean): PermissionAttachment;
     unsetPermission(name: string): PermissionAttachment;
@@ -977,7 +977,7 @@ export interface PermissionAttachment {
 /**
  * 权限附加信息
  */
-export interface PermissionAttachmentInfo {
+declare interface PermissionAttachmentInfo {
     getAttachment(): PermissionAttachment | null;
     getPermission(): string;
     getValue(): boolean;
@@ -987,7 +987,7 @@ export interface PermissionAttachmentInfo {
 /**
  * 可授权对象
  */
-export interface Permissible extends CommandSender {
+declare interface Permissible extends CommandSender {
     isOp(): boolean;
     setOp(op: boolean): void;
     hasPermission(name: string): boolean;
@@ -1006,7 +1006,7 @@ export interface Permissible extends CommandSender {
 /**
  * 物品实体
  */
-export interface Item extends Entity {
+declare interface Item extends Entity {
     getItemStack(): ItemStack;
     setItemStack(item: ItemStack): void;
     getPickupDelay(): number;
@@ -1018,13 +1018,13 @@ export interface Item extends Entity {
 /**
  * 箭实体
  */
-export interface Arrow extends Projectile {
+declare interface Arrow extends Projectile {
 }
 
 /**
  * 抛射物
  */
-export interface Projectile extends Entity {
+declare interface Projectile extends Entity {
     getShooter(): any;
     setShooter(shooter: any): void;
     doesBounce(): boolean;
@@ -1036,7 +1036,7 @@ export interface Projectile extends Entity {
 /**
  * 下落方块
  */
-export interface FallingBlock extends Entity {
+declare interface FallingBlock extends Entity {
     getBlockData(): BlockData;
     getMaterial(): Material;
     getBlockId(): number;
@@ -1053,7 +1053,7 @@ export interface FallingBlock extends Entity {
 /**
  * 区块
  */
-export interface Chunk {
+declare interface Chunk {
     getX(): number;
     getZ(): number;
     getWorld(): World;
@@ -1078,7 +1078,7 @@ export interface Chunk {
 /**
  * 区块快照
  */
-export interface ChunkSnapshot {
+declare interface ChunkSnapshot {
     getWorldName(): string;
     getX(): number;
     getZ(): number;
@@ -1095,7 +1095,7 @@ export interface ChunkSnapshot {
 /**
  * 记分板管理器
  */
-export interface ScoreboardManager {
+declare interface ScoreboardManager {
     getMainScoreboard(): Scoreboard;
     getNewScoreboard(): Scoreboard;
     getPlayerScoreboard(player: Player): Scoreboard;
@@ -1105,7 +1105,7 @@ export interface ScoreboardManager {
 /**
  * 记分板
  */
-export interface Scoreboard {
+declare interface Scoreboard {
     registerNewObjective(name: string, criteria: string, displayName?: string, renderType?: any): Objective;
     getObjective(name: string): Objective | null;
     getObjectives(): Objective[];
@@ -1121,7 +1121,7 @@ export interface Scoreboard {
 /**
  * 目标
  */
-export interface Objective {
+declare interface Objective {
     getName(): string;
     getDisplayName(): string;
     setDisplayName(name: string): void;
@@ -1136,7 +1136,7 @@ export interface Objective {
 /**
  * 分数
  */
-export interface Score {
+declare interface Score {
     getScoreboard(): Scoreboard;
     getEntry(): string;
     getPlayer(): Player;
@@ -1149,7 +1149,7 @@ export interface Score {
 /**
  * 队伍
  */
-export interface Team {
+declare interface Team {
     getName(): string;
     getDisplayName(): string;
     setDisplayName(name: string): void;
@@ -1178,7 +1178,7 @@ export interface Team {
 /**
  * 显示槽
  */
-export enum DisplaySlot {
+declare enum DisplaySlot {
     BELOW_NAME,
     PLAYER_LIST,
     SIDEBAR,
@@ -1199,6 +1199,3 @@ export enum DisplaySlot {
     SIDEBAR_TEAM_YELLOW,
     SIDEBAR_TEAM_WHITE
 }
-
-// 导出常用类型
-export type { UUID, File, Logger, ConfigurationSection, Permission, PermissionAttachment, PermissionAttachmentInfo, InetSocketAddress, Map, Set, TreeType, PistonMoveReaction, Enchantment };

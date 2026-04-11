@@ -1,9 +1,29 @@
 const path = require('path');
 
+function getEntryPath() {
+    try {
+        const config = require('./jukkit.config.js');
+        const projectConfig = (config.default || config).project || {};
+        const typescript = projectConfig.typescript;
+        const tsEnabled = typescript && typescript.enable === true;
+        const entry = projectConfig.entry || 'index.js';
+
+        if (tsEnabled) {
+            const tsEntry = typescript.entry || entry.replace(/\.js$/, '.ts');
+            const tsEntryBase = path.basename(tsEntry);
+            return `./dist/ts/${tsEntryBase}`;
+        }
+
+        return `./src/${entry}`;
+    } catch (err) {
+        return './src/index.js';
+    }
+}
+
 module.exports = {
     target: ['web', 'es5'],
     entry: {
-        index: './src/index.js'
+        index: getEntryPath()
     },
     output: {
         path: path.resolve(__dirname, 'dist/rspack'),

@@ -13,7 +13,6 @@
     "sourceMap": false,
     "outDir": "./dist/ts",
     "rootDir": "./src",
-    "baseUrl": ".",
     "paths": {
       "fs": ["./types/modules/fs.d.ts"],
       "http": ["./types/modules/http.d.ts"],

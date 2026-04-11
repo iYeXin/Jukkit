@@ -1,5 +1,4 @@
 const Logger = require('Logger');
-const fetch = require('fetch');
 
 const logger = new Logger('Hello');
 
@@ -10,6 +9,7 @@ async function getHitokoto() {
         const response = await fetch(HITOKOTO_API);
         const data = await response.json();
         return {
+
             text: data.hitokoto || '获取一言失败',
             from: data.from || '',
             fromWho: data.from_who || '',

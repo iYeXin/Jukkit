@@ -2,8 +2,6 @@
 
 const hello = require('./hello');
 
-jukkit.log('正在加载');
-
 jukkit.onEnable(function () {
     hello.init();
 });
