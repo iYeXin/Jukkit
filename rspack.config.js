@@ -10,7 +10,7 @@ function getEntryPath() {
 
         if (tsEnabled) {
             const tsEntry = typescript.entry || entry.replace(/\.js$/, '.ts');
-            const tsEntryBase = path.basename(tsEntry);
+            const tsEntryBase = path.basename(tsEntry.replace(/\.ts$/, '.js'));
             return `./dist/ts/${tsEntryBase}`;
         }
 
