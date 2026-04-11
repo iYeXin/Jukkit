@@ -17,7 +17,7 @@ module.exports = {
         rules: [
             {
                 test: /\.js$/,
-                exclude: /node_modules|src[\\\/]init/,
+                exclude: /node_modules|\.jukkit[\\\/]init/,
                 use: {
                     loader: 'babel-loader',
                     options: {
@@ -47,7 +47,7 @@ module.exports = {
     resolve: {
         extensions: ['.js'],
         modules: [
-            path.resolve(__dirname, 'modules'),
+            path.resolve(__dirname, '.jukkit/modules'),
             'node_modules'
         ]
     }

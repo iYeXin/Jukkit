@@ -27,7 +27,7 @@ async function getHitokoto() {
 }
 
 function formatHitokoto(data) {
-    var result = '§e' + data.text;
+    let result = '§e' + data.text;
     if (data.from) {
         result += ' §7—— ' + data.from;
     }
@@ -35,7 +35,7 @@ function formatHitokoto(data) {
 }
 
 async function init() {
-    jukkit.command('hello', async function (sender, cmd, label, args) {
+    jukkit.registerCommand('hello', async function (sender, cmd, label, args) {
         sender.sendMessage('§a正在获取一言...');
         const data = await getHitokoto();
         sender.sendMessage(formatHitokoto(data));

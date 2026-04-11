@@ -3,6 +3,38 @@
 
 // 注意：此文件使用环境声明，类型从 events.d.ts 全局可用
 
+// ========== 平台信息接口 ==========
+
+/**
+ * 平台信息接口
+ * 提供当前运行平台的相关信息
+ */
+interface PlatformInfo {
+    /**
+     * 平台类型
+     * - "BUKKIT": Bukkit/Spigot/Paper 等基于 Bukkit API 的服务器
+     */
+    readonly type: "BUKKIT";
+
+    /**
+     * Minecraft 版本号
+     * 如 "1.20.4"，解析失败时为 "unknown"
+     */
+    readonly mcVersion: string;
+
+    /**
+     * 获取平台类型
+     * @returns 平台类型字符串
+     */
+    getType(): "BUKKIT";
+
+    /**
+     * 获取 Minecraft 版本号
+     * @returns Minecraft 版本号字符串
+     */
+    getMcVersion(): string;
+}
+
 // ========== 资源处理器接口 ==========
 
 /**
@@ -184,7 +216,43 @@ interface JukkitAPI {
     // ========== 事件监听 ==========
 
     /**
+     * 添加事件监听器（通过事件名称 - 支持类型推断）
+     * jukkit.on 是此方法的简写形式
+     * @param eventName 事件名称，如 "PlayerJoinEvent"
+     * @param handler 事件处理函数，event 参数会自动推断为对应的事件类型
+     * @example
+     * jukkit.addEventListener("PlayerJoinEvent", function(event) {
+     *     var player = event.getPlayer(); // Player 类型
+     * });
+     */
+    addEventListener<K extends keyof EventMap>(eventName: K, handler: (event: EventMap[K]) => void): JukkitAPI;
+
+    /**
+     * 添加事件监听器（通过事件名称 + 优先级 - 支持类型推断）
+     * @param eventName 事件名称
+     * @param priority 优先级："LOWEST", "LOW", "NORMAL", "HIGH", "HIGHEST", "MONITOR"
+     * @param handler 事件处理函数，event 参数会自动推断为对应的事件类型
+     */
+    addEventListener<K extends keyof EventMap>(eventName: K, priority: EventPriority, handler: (event: EventMap[K]) => void): JukkitAPI;
+
+    /**
+     * 添加事件监听器（通过事件名称 - 通用字符串，无类型推断）
+     * @param eventName 任意事件名称字符串
+     * @param handler 事件处理函数
+     */
+    addEventListener(eventName: string, handler: (event: any) => void): JukkitAPI;
+
+    /**
+     * 添加事件监听器（通过事件名称 + 优先级 - 通用字符串，无类型推断）
+     * @param eventName 任意事件名称字符串
+     * @param priority 优先级
+     * @param handler 事件处理函数
+     */
+    addEventListener(eventName: string, priority: EventPriority, handler: (event: any) => void): JukkitAPI;
+
+    /**
      * 监听事件（通过事件名称 - 支持类型推断）
+     * jukkit.addEventListener 的简写形式
      * @param eventName 事件名称，如 "PlayerJoinEvent"
      * @param handler 事件处理函数，event 参数会自动推断为对应的事件类型
      * @example
@@ -239,12 +307,30 @@ interface JukkitAPI {
      * @param name 命令名称
      * @param executor 命令执行函数
      */
-    command(name: string, executor: CommandExecutor): JukkitAPI;
+    registerCommand(name: string, executor: CommandExecutor): JukkitAPI;
+
+    /**
+     * 注册带 Tab 补全的命令
+     * @param name 命令名称
+     * @param executor 命令执行函数
+     * @param tabCompleter Tab 补全函数
+     */
+    registerCommand(name: string, executor: CommandExecutor, tabCompleter: TabCompleter): JukkitAPI;
 
     /**
      * 注册带选项的命令
      * @param name 命令名称
      * @param options 命令选项
+     */
+    registerCommand(name: string, options: CommandOptions): JukkitAPI;
+
+    /**
+     * @deprecated 使用 registerCommand 代替
+     */
+    command(name: string, executor: CommandExecutor): JukkitAPI;
+
+    /**
+     * @deprecated 使用 registerCommand 代替
      */
     command(name: string, options: CommandOptions): JukkitAPI;
 
@@ -323,43 +409,6 @@ interface JukkitAPI {
      */
     cancelTask(taskId: number): boolean;
 
-    // ========== 数据存储 ==========
-
-    /**
-     * 存储数据
-     * @param key 键
-     * @param value 值
-     */
-    store(key: string, value: any): JukkitAPI;
-
-    /**
-     * 获取数据
-     * @param key 键
-     * @returns 值
-     */
-    get(key: string): any;
-
-    /**
-     * 获取数据（带类型）
-     * @param key 键
-     * @param type 类型，如 Java.type("java.lang.String")
-     * @returns 值
-     */
-    get<T>(key: string, type: new (...args: any[]) => T): T | null;
-
-    /**
-     * 检查键是否存在
-     * @param key 键
-     * @returns 是否存在
-     */
-    has(key: string): boolean;
-
-    /**
-     * 删除数据
-     * @param key 键
-     */
-    remove(key: string): JukkitAPI;
-
     // ========== 资源访问 ==========
 
     /**
@@ -374,7 +423,23 @@ interface JukkitAPI {
      */
     readonly resource: ResourceHandler;
 
+    /**
+     * 平台信息
+     * 提供当前运行平台的相关信息
+     * @example
+     * if (jukkit.platform.type === 'BUKKIT') {
+     *     // Bukkit 平台特定逻辑
+     * }
+     */
+    readonly platform: PlatformInfo;
+
     // ========== 工具方法 ==========
+
+    /**
+     * 获取插件数据目录路径
+     * @returns 插件数据目录路径，格式为 "plugins/插件名"
+     */
+    getDataDirPath(): string;
 
     /**
      * 记录日志（INFO 级别）
@@ -478,6 +543,13 @@ interface CommandOptions {
  */
 interface TabCompleterFunction {
     (sender: CommandSender, cmd: Command, alias: string, args: string[]): string[] | null;
+}
+
+/**
+ * Tab 补全接口（Bukkit 标准）
+ */
+interface TabCompleter {
+    onTabComplete(sender: CommandSender, cmd: Command, alias: string, args: string[]): string[] | null;
 }
 
 /**

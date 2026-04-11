@@ -4,6 +4,10 @@ node_modules/
 # Build output
 dist/
 
+# Jukkit build artifacts
+.jukkit/manifest.json
+.jukkit/modules.zip
+
 # IDE
 .idea/
 .vscode/

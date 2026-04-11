@@ -11,14 +11,14 @@
 - **可选 TypeScript 编译** - 支持使用 TypeScript 编写插件，类型安全
 - **产物为标准 JAR** - 生成的 JAR 文件可直接加载到 Minecraft 服务器
 - **远程部署** - 支持 MCSManager 自动上传
-- **多目标编译** - 支持 Standalone 和 Common 两种版本，按需选择
+- **多目标编译** - 支持 Standalone 和 Common 两种版本，可同时输出
 
 ![编辑器自动补全](./docs/img/1.png)
 
 ## 文档
 
 - **[快速开始](./docs/快速开始.md)** - 快速上手 Jukkit 开发
-- **[进阶知识](./docs/进阶知识.md)** - 深入了解构建配置、init 机制、模块系统等
+- **[进阶知识](./docs/进阶知识.md)** - 深入了解构建配置、资源管理等
 - **[API 文档](./docs/API.md)** - 完整的 Jukkit API 参考
 - **[库模块文档](./docs/LIBS.md)** - 内置库模块详细文档
 
@@ -28,7 +28,7 @@
 // src/index.js
 jukkit.onEnable(() => {
     // 注册命令
-    jukkit.command('hello', (sender) => {
+    jukkit.registerCommand('hello', (sender) => {
         sender.sendMessage('§aHello, ' + sender.getName() + '!');
         return true;
     });
@@ -57,48 +57,45 @@ npm install
 
 ## 版本选择
 
-Jukkit 1.3.0+ 提供两种编译目标：
+Jukkit 1.3.0+ 提供两种编译目标，可同时编译输出：
 
-### Common 版本（推荐）
+### Standalone 版本
 
-- ✅ 支持 Vert.x 网络库
-- ✅ 多插件共享依赖，总体积更小
-- ✅ 未来支持 Node.js 核心模块和 npm 生态
-- ⚠️ 需要 Jukkit-Common 前置插件
+- 内嵌 Nashorn JavaScript 引擎
+- 无需任何前置插件
+- 单个 JAR 文件即可运行
 
-### Standalone 版本（不推荐）
+### Common 版本
 
-- ✅ 内嵌 Nashorn JavaScript 引擎
-- ✅ 无需任何前置插件
-- ❌ 不支持 Vert.x
-- ❌ 不支持 Node.js 核心模块和 npm 生态
-- ⚠️ 未来不会添加新功能
+- 需要 Jukkit-Common 前置插件
+- 多插件共享 Nashorn 引擎
+- 单个插件体积更小
 
 ### 体积对比
 
 | 组件                   | 大小                          |
 | ---------------------- | ----------------------------- |
-| Jukkit-Common 前置插件 | ~8.5 MB                       |
+| Jukkit-Common 前置插件 | ~2 MB                         |
 | Standalone 方案插件    | ~2.5 MB                       |
 | Common 方案插件        | > 0.05 MB（取决于项目复杂度） |
 
-> **建议**：对于新项目，推荐使用 Common 版本。Standalone 版本适合简单场景或不想安装前置插件的情况。
+### 配置方式
 
 在 `jukkit.config.js` 中配置：
 
 ```javascript
 project: {
-    target: 'common'  // 或 'standalone'，或 ['standalone', 'common'] 同时编译
+    target: ['standalone', 'common']  // 同时编译两个版本
 }
 ```
+
+> **建议**：分发插件时可同时提供两个版本，让用户根据需要选择。
 
 ## 前置插件（仅 Common 版本需要）
 
 如果使用 Common 版本，需要将 `jukkit-common-1.3.0.jar` 放入服务器的 `plugins` 目录。
 
 Modrinth 地址：[https://modrinth.com/plugin/jukkit-common](https://modrinth.com/plugin/jukkit-common)
-
-> Jukkit-Common 提供了 Nashorn JavaScript 引擎和 Vert.x 的共享实例，多个 Jukkit 插件可以共用同一份依赖，大幅减少总体积。
 
 ## 开发流程
 
@@ -113,8 +110,6 @@ Modrinth 地址：[https://modrinth.com/plugin/jukkit-common](https://modrinth.c
 
 ```
 Jukkit/
-├── init/                 # 初始化脚本（无需修改）
-├── modules/              # 模块目录（可直接 require 引入）
 ├── src/
 │   ├── index.js          # 入口文件
 │   └── assets/           # 资源目录
@@ -136,13 +131,12 @@ Jukkit/
 
 ## TODO
 
-- 使用 Vert.x 提供 Node.js 核心模块兼容层，以支持 npm 生态
 - 支持 source map
 - 迁移至其他 JS 引擎
 
 ## 相关项目
 
-- **[Jukkit-Common](https://github.com/iYeXin/Jukkit-Common/)** - 前置插件，提供 Nashorn 引擎和 Vert.x 的共享实例（仅 Common 版本需要）
+- **[Jukkit-Common](https://github.com/iYeXin/Jukkit-Common/)** - 前置插件，提供共享的 Nashorn 引擎（仅 Common 版本需要）
 - **[Jukkit-Template](https://github.com/iYeXin/Jukkit-Template/)** - JAR 模板项目，包含 Java 运行时类
 
 ## 致谢
